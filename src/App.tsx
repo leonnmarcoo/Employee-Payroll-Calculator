@@ -1,7 +1,46 @@
+import { useState } from 'react'
+import { calculateContributions } from './contributions'
+import { calculatePayroll, DEFAULT_PAYROLL_RULES } from './payroll'
+
 const navigation = ['Payroll Calculator']
-const contributionRows = ['SSS Contribution', 'PhilHealth', 'Pag-IBIG']
+const money = (amount: number) => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount)
+const parseAmount = (value: string) => value.trim() === '' ? 0
+  : /^(?:\d+(?:\.\d*)?|\.\d+)$/.test(value.trim()) ? Number(value) : NaN
 
 export default function App() {
+  const [monthlySalary, setMonthlySalary] = useState('')
+  const [payPeriod, setPayPeriod] = useState<'first' | 'second'>('first')
+  const [attendance, setAttendance] = useState<Record<string, string>>({})
+  const [earnings, setEarnings] = useState<Record<string, string>>({})
+  const salary = Number(monthlySalary)
+  const contributions = monthlySalary.trim() !== '' && Number.isFinite(salary) && salary > 0
+    ? calculateContributions(salary)
+    : null
+  const contributionRows = [
+    { label: 'SSS Contribution', value: contributions?.sss },
+    { label: 'PhilHealth', value: contributions?.philHealth },
+    { label: 'Pag-IBIG', value: contributions?.pagIbig },
+  ]
+  let payroll: ReturnType<typeof calculatePayroll> | null = null
+  let payrollError = ''
+  if (monthlySalary.trim() !== '') {
+    try {
+      if (Object.values(attendance).some((value) => !Number.isFinite(parseAmount(value)))) {
+        throw new Error('Attendance must contain valid nonnegative numbers.')
+      }
+      payroll = calculatePayroll({
+        monthlySalary: parseAmount(monthlySalary),
+        payPeriod,
+        absentDays: parseAmount(attendance['Absent Days'] ?? ''),
+        regularOvertimeHours: parseAmount(earnings['Regular Overtime Hours'] ?? ''),
+        restDayOvertimeHours: parseAmount(earnings['Rest Day Overtime Hours'] ?? ''),
+        allowances: parseAmount(earnings['Allowances'] ?? ''),
+        bonuses: parseAmount(earnings['Bonuses'] ?? ''),
+      }, DEFAULT_PAYROLL_RULES)
+    } catch (error) {
+      payrollError = error instanceof Error ? error.message : 'Check the payroll inputs.'
+    }
+  }
   return (
     <div className="min-h-screen bg-[#f4f6fb] text-slate-800 lg:flex">
       <aside className="flex w-full flex-col bg-[#35408e] text-white lg:sticky lg:top-0 lg:h-screen lg:w-64 lg:shrink-0">
@@ -69,8 +108,8 @@ export default function App() {
                 </div>
                 <div className="grid gap-4 p-6 sm:grid-cols-3">
                   <label className="text-xs font-semibold text-slate-500">Payroll Month<input className="field" type="month" /></label>
-                  <label className="text-xs font-semibold text-slate-500">Pay Period<select className="field"><option>1st Half (1-15)</option><option>2nd Half (16-end)</option></select></label>
-                  <label className="text-xs font-semibold text-slate-500">Monthly Basic Salary<input className="field" placeholder="0.00" /></label>
+                  <label className="text-xs font-semibold text-slate-500">Pay Period<select className="field" value={payPeriod} onChange={(event) => setPayPeriod(event.target.value as 'first' | 'second')}><option value="first">1st Half (1-15)</option><option value="second">2nd Half (16-end)</option></select></label>
+                  <label className="text-xs font-semibold text-slate-500">Monthly Basic Salary<input className="field" type="number" min="0" step="0.01" placeholder="0.00" value={monthlySalary} onChange={(event) => setMonthlySalary(event.target.value)} /></label>
                 </div>
               </section>
 
@@ -80,7 +119,7 @@ export default function App() {
                 </div>
                 <div className="grid grid-cols-2 gap-3 p-6 sm:grid-cols-4">
                   {['Days Worked', 'Present Days', 'Absent Days', 'Total Hours'].map((label) => (
-                    <label className="text-center text-xs font-semibold text-slate-500" key={label}>{label}<input className="field text-center" placeholder="0" /></label>
+                    <label className="text-center text-xs font-semibold text-slate-500" key={label}>{label}<input className="field text-center" placeholder="0" inputMode="decimal" value={attendance[label] ?? ''} onChange={(event) => setAttendance((values) => ({ ...values, [label]: event.target.value }))} aria-invalid={!Number.isFinite(parseAmount(attendance[label] ?? ''))} /></label>
                   ))}
                 </div>
               </section>
@@ -91,7 +130,7 @@ export default function App() {
                 </div>
                 <div className="grid gap-4 p-6 sm:grid-cols-2">
                   {['Regular Overtime Hours', 'Rest Day Overtime Hours', 'Allowances', 'Bonuses'].map((label) => (
-                    <label className="text-xs font-semibold text-slate-500" key={label}>{label}<input className="field" placeholder="0.00" /></label>
+                    <label className="text-xs font-semibold text-slate-500" key={label}>{label}<input className="field" placeholder="0.00" inputMode="decimal" value={earnings[label] ?? ''} onChange={(event) => setEarnings((values) => ({ ...values, [label]: event.target.value }))} aria-invalid={!Number.isFinite(parseAmount(earnings[label] ?? ''))} /></label>
                   ))}
                 </div>
               </section>
@@ -100,10 +139,11 @@ export default function App() {
                 <div className="border-b border-slate-100 px-6 py-4">
                   <h3 className="font-bold">Government Contributions</h3>
                 </div>
+                <p className="px-6 pt-5 text-xs text-slate-500">Monthly estimates based on basic salary and the 2025 SSS and PhilHealth schedules and Pag-IBIG Circular 460. SSS includes employer-paid EC. Verify rates for the selected payroll month. Half of each monthly employee share is deducted per semi-monthly period.</p>
                 <div className="overflow-x-auto p-6">
                   <table className="w-full min-w-[520px] text-left text-sm">
                     <thead className="text-xs uppercase tracking-wide text-slate-400"><tr><th className="pb-3">Contribution</th><th className="pb-3 text-right">Employee Share</th><th className="pb-3 text-right">Employer Share</th></tr></thead>
-                    <tbody className="divide-y divide-slate-100">{contributionRows.map((label) => <tr key={label}><td className="py-3 font-medium">{label}</td><td className="py-3 text-right text-slate-500">-</td><td className="py-3 text-right text-slate-500">-</td></tr>)}</tbody>
+                    <tbody className="divide-y divide-slate-100">{contributionRows.map(({ label, value }) => <tr key={label}><td className="py-3 font-medium">{label}</td><td className="py-3 text-right text-slate-500">{value ? money(value.employee) : '-'}</td><td className="py-3 text-right text-slate-500">{value ? money(value.employer) : '-'}</td></tr>)}</tbody>
                   </table>
                 </div>
               </section>
@@ -119,10 +159,10 @@ export default function App() {
               </section>
               <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
                 <div className="bg-[#35408e] px-6 py-4 text-white"><h3 className="font-bold">Payroll Summary</h3></div>
-                <div className="space-y-4 p-6 text-sm">
-                  <div className="flex justify-between"><span className="text-slate-500">Gross Pay</span><strong>-</strong></div>
-                  <div className="flex justify-between"><span className="text-slate-500">Total Deductions</span><strong>-</strong></div>
-                  <div className="border-t border-dashed border-slate-200 pt-4"><span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Net Pay</span><p className="mt-2 text-3xl font-bold text-[#35408e]">-</p></div>
+                <div className="space-y-4 p-6 text-sm" aria-live="polite" title={payrollError || undefined}>
+                  <div className="flex justify-between"><span className="text-slate-500">Gross Pay</span><strong>{payroll ? money(payroll.grossPay) : '-'}</strong></div>
+                  <div className="flex justify-between"><span className="text-slate-500">Total Deductions</span><strong>{payroll ? money(payroll.totalDeductions) : '-'}</strong></div>
+                  <div className="border-t border-dashed border-slate-200 pt-4"><span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Net Pay</span><p className="mt-2 text-3xl font-bold text-[#35408e]">{payroll ? money(payroll.netPay) : '-'}</p></div>
                 </div>
               </section>
             </aside>
