@@ -37,6 +37,8 @@ function periodShare(monthlyAmount: number, period: PayrollInput['payPeriod']) {
 // Rules are explicit so payroll policy cannot be hidden in the interface.
 // Allowances, bonuses, absences and overtime refer to the selected pay period.
 export function calculatePayroll(input: PayrollInput, rules: PayrollRules) {
+  if (input.payPeriod !== 'first' && input.payPeriod !== 'second') throw new Error('Choose a valid pay period.')
+  if (!['split', 'first', 'second'].includes(rules.contributionSchedule)) throw new Error('Choose a valid contribution schedule.')
   const amounts = [input.monthlySalary, input.absentDays, input.regularOvertimeHours,
     input.restDayOvertimeHours, input.allowances, input.bonuses]
   if (amounts.some((amount) => !Number.isFinite(amount) || amount < 0) || input.monthlySalary === 0) {

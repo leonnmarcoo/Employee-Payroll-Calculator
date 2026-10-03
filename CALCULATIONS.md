@@ -1,7 +1,9 @@
 # Payroll calculation rules
 
 The Payroll Summary updates from the existing inputs. Calculation logic lives in
-`src/payroll.ts`; this repository is a browser-based React app with no server API.
+`src/payroll.ts`. The React interface and Node API share the same validation and
+calculation functions. The API recalculates each saved draft and stores its input,
+totals and applied rules in SQLite.
 
 The user confirmed these project defaults, configurable in `DEFAULT_PAYROLL_RULES`:
 
@@ -24,14 +26,20 @@ The Government Contributions table continues to display full monthly estimates
 using the existing basic-salary contribution model and supplied reference rates.
 These are not an automatic schedule selection based on Payroll Month.
 
-Days Worked, Present Days and Total Hours remain attendance reference values.
+Days Worked, Present Days and Total Hours are saved attendance reference values.
 They do not also reduce pay: only Absent Days changes regular pay, avoiding
 multiple deductions for the same absence. Blank optional inputs mean zero.
 Missing/invalid salary, negative or invalid numbers, or absences exceeding the
-period's basic pay leave summary values blank (shown as dashes).
+period's basic pay leave summary values blank (shown as dashes). Field errors are
+shown when a field is left or Save Draft is selected. Amounts accept at most two
+decimal places, monetary inputs are capped at PHP 1 billion, and attendance is
+checked against the selected period's calendar length. An employee ID, employee
+name and valid month are required to save. A draft without a salary may be saved
+as incomplete, with no calculated result.
 
 Each pay component is rounded to cents. A split rounds the first period to cents
 and assigns the remaining cents to the second period so monthly totals reconcile.
 
-Run `npm test` with Node 22.6+ (TypeScript stripping support), `npx tsc --noEmit`,
-and `npm run build` to verify the calculations and application.
+Run `npm test` and `npm run build` with Node 22.18+ to verify the calculations,
+SQLite persistence, API and application. The build includes TypeScript checking.
+See README.md for setup, backups, hosting and the complete draft workflow.

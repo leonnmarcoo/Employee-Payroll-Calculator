@@ -4,6 +4,21 @@ body {
   margin: 0;
 }
 
+html { scroll-behavior: smooth; }
+button, a, summary { -webkit-tap-highlight-color: transparent; }
+button, a { touch-action: manipulation; }
+button { cursor: pointer; transition: transform 180ms cubic-bezier(.2,.8,.2,1), opacity 180ms ease, background-color 180ms ease; }
+button:active:not(:disabled) { transform: scale(.97); }
+button:disabled { cursor: not-allowed; opacity: .5; }
+button:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px solid #35408e66; outline-offset: 3px; }
+fieldset { border: 0; padding: 0; margin: 0; }
+.amount { font-variant-numeric: tabular-nums; }
+.notice { animation: reveal 240ms cubic-bezier(.16,1,.3,1) both; }
+.confirm-dialog { margin: auto; width: min(420px, calc(100vw - 32px)); animation: reveal 280ms cubic-bezier(.16,1,.3,1) both; }
+.confirm-dialog::backdrop { background: #0f172a55; backdrop-filter: blur(5px); }
+.print-report { display: none; }
+@keyframes reveal { from { opacity: 0; transform: translateY(8px) scale(.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
 .field {
   display: block;
   width: 100%;
@@ -14,6 +29,26 @@ body {
   padding: 0.625rem 0.75rem;
   color: #1e293b;
   outline: none;
+  min-width: 0;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.field[aria-invalid='true'] { border-color: #b91c1c; }
+.field[aria-invalid='true']:focus { box-shadow: 0 0 0 3px #b91c1c1a; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+@media print {
+  .app-shell, dialog { display: none !important; }
+  .print-report { display: block; color: #111; font: 12px/1.5 Arial, sans-serif; padding: 16px; }
+  .print-report h1 { font-size: 22px; font-weight: 700; margin-bottom: 12px; }
+  .print-report p { margin: 8px 0; }
+  .print-report table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+  .print-report th, .print-report td { padding: 5px 8px; border-bottom: 1px solid #ddd; text-align: left; }
+  .print-report td { text-align: right; }
+  .print-report tr { break-inside: avoid; }
+  @page { margin: 15mm; }
 }
 
 .field:focus {
