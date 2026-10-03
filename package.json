@@ -4,11 +4,15 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
+    "dev": "node --experimental-strip-types scripts/dev.mjs",
+    "build": "tsc --noEmit && vite build",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "start": "node --experimental-strip-types server/index.mjs",
+    "preview": "npm start",
+    "backup": "node --experimental-strip-types scripts/backup.mjs",
     "format": "oxfmt"
   },
+  "engines": { "node": ">=22.18.0" },
   "dependencies": {
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
